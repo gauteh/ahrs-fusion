@@ -2,7 +2,7 @@
 
 mod nxp;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NxpFusion {
     freq: f32,
     nxp: nxp::Nxp,
@@ -120,10 +120,13 @@ mod tests {
     #[test]
     fn update_nxp() {
         let mut nxp = NxpFusion::new(150.);
+        let nxp1 = nxp.clone();
         println!("{nxp:?}");
 
         nxp.update(1., 2., 3., 4., 5., 6., 0., 0., 0.);
         println!("{nxp:?}");
+
+        assert_ne!(nxp1, nxp);
     }
 
     #[test]

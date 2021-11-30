@@ -21,6 +21,7 @@ fn main() {
         .use_core()
         .ctypes_prefix("cty")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .derive_eq(true)
         .generate()
         .expect("Unable to generate bindings");
 
