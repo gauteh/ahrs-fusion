@@ -1,6 +1,6 @@
 # AHRS Fusion
 
-Port of NXP sensor fusion algorithms based on Kalman filters for rust.
+Port of Adafruit NXP sensor fusion algorithms based on Kalman filters for rust.
 
 ## Resources
 

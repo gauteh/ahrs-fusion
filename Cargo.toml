@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 
 [build-dependencies]
-bindgen = "*"
 cc = "*"
+bindgen = "*"

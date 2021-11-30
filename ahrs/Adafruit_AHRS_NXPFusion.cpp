@@ -35,9 +35,9 @@
  * inevitable) that you screw it up.
  */
 
-# include <math.h>
-# include <stdint.h>
-# include "Adafruit_AHRS_NXPFusion.h"
+#include "Adafruit_AHRS_NXPFusion.h"
+#include <math.h>
+#include <stdint.h>
 
 // kalman filter noise variances
 #define FQVA_9DOF_GBY_KALMAN 2E-6F // accelerometer noise g^2 so 1.4mg RMS
@@ -123,78 +123,81 @@ void fmatrixAeqRenormRotA(float A[][3]);
  * @brief Initializes the 9DOF Kalman filter.
  */
 /**************************************************************************/
-void Adafruit_NXPSensorFusion::begin(float sampleFrequency) {
+Nxp nxp_begin(float sampleFrequency) {
   int8_t i, j;
+
+  Nxp nxp;
 
   // reset the flag denoting that a first 9DOF orientation lock has been
   // achieved
-  FirstOrientationLock = 0;
+  nxp.FirstOrientationLock = 0;
 
   // compute and store useful product terms to save floating point calculations
   // later
-  Fastdeltat = 1.0f / sampleFrequency;
-  deltat = Fastdeltat;
-  deltatsq = deltat * deltat;
-  casq = FCA_9DOF_GBY_KALMAN * FCA_9DOF_GBY_KALMAN;
-  cdsq = FCD_9DOF_GBY_KALMAN * FCD_9DOF_GBY_KALMAN;
-  QwbplusQvG = FQWB_9DOF_GBY_KALMAN + FQVG_9DOF_GBY_KALMAN;
+  nxp.Fastdeltat = 1.0f / sampleFrequency;
+  nxp.deltat = nxp.Fastdeltat;
+  nxp.deltatsq = nxp.deltat * nxp.deltat;
+  nxp.casq = FCA_9DOF_GBY_KALMAN * FCA_9DOF_GBY_KALMAN;
+  nxp.cdsq = FCD_9DOF_GBY_KALMAN * FCD_9DOF_GBY_KALMAN;
+  nxp.QwbplusQvG = FQWB_9DOF_GBY_KALMAN + FQVG_9DOF_GBY_KALMAN;
 
   // initialize the fixed entries in the measurement matrix C
   for (i = 0; i < 6; i++) {
     for (j = 0; j < 12; j++) {
-      C6x12[i][j] = 0.0F;
+      nxp.C6x12[i][j] = 0.0F;
     }
   }
-  C6x12[0][6] = C6x12[1][7] = C6x12[2][8] = 1.0F;
-  C6x12[3][9] = C6x12[4][10] = C6x12[5][11] = -1.0F;
+  nxp.C6x12[0][6] = nxp.C6x12[1][7] = nxp.C6x12[2][8] = 1.0F;
+  nxp.C6x12[3][9] = nxp.C6x12[4][10] = nxp.C6x12[5][11] = -1.0F;
 
   // zero a posteriori orientation, error vector xe+ (thetae+, be+, de+, ae+)
   // and b+ and inertial
-  f3x3matrixAeqI(RPl);
-  fqAeq1(&qPl);
+  f3x3matrixAeqI(nxp.RPl);
+  fqAeq1(&(nxp.qPl));
   for (i = X; i <= Z; i++) {
-    ThErrPl[i] = bErrPl[i] = aErrSePl[i] = dErrSePl[i] = bPl[i] = 0.0F;
+    nxp.ThErrPl[i] = nxp.bErrPl[i] = nxp.aErrSePl[i] = nxp.dErrSePl[i] =
+        nxp.bPl[i] = 0.0F;
   }
 
   // initialize the reference geomagnetic vector (uT, global frame)
-  DeltaPl = 0.0F;
+  nxp.DeltaPl = 0.0F;
   // initialize NED geomagnetic vector to zero degrees inclination
-  mGl[X] = DEFAULTB;
-  mGl[Y] = 0.0F;
-  mGl[Z] = 0.0F;
+  nxp.mGl[X] = DEFAULTB;
+  nxp.mGl[Y] = 0.0F;
+  nxp.mGl[Z] = 0.0F;
 
   // initialize noise variances for Qv and Qw matrix updates
-  QvAA = FQVA_9DOF_GBY_KALMAN + FQWA_9DOF_GBY_KALMAN +
-         FDEGTORAD * FDEGTORAD * deltatsq *
-             (FQWB_9DOF_GBY_KALMAN + FQVG_9DOF_GBY_KALMAN);
-  QvMM = FQVM_9DOF_GBY_KALMAN + FQWD_9DOF_GBY_KALMAN +
-         FDEGTORAD * FDEGTORAD * deltatsq * DEFAULTB * DEFAULTB *
-             (FQWB_9DOF_GBY_KALMAN + FQVG_9DOF_GBY_KALMAN);
+  nxp.QvAA = FQVA_9DOF_GBY_KALMAN + FQWA_9DOF_GBY_KALMAN +
+             FDEGTORAD * FDEGTORAD * nxp.deltatsq *
+                 (FQWB_9DOF_GBY_KALMAN + FQVG_9DOF_GBY_KALMAN);
+  nxp.QvMM = FQVM_9DOF_GBY_KALMAN + FQWD_9DOF_GBY_KALMAN +
+             FDEGTORAD * FDEGTORAD * nxp.deltatsq * DEFAULTB * DEFAULTB *
+                 (FQWB_9DOF_GBY_KALMAN + FQVG_9DOF_GBY_KALMAN);
 
   // initialize the 12x12 noise covariance matrix Qw of the a priori error
   // vector xe- Qw is then recursively updated as P+ = (1 - K * C) * P- = (1 - K
   // * C) * Qw  and Qw updated from P+ zero the matrix Qw
   for (i = 0; i < 12; i++) {
     for (j = 0; j < 12; j++) {
-      Qw12x12[i][j] = 0.0F;
+      nxp.Qw12x12[i][j] = 0.0F;
     }
   }
   // loop over non-zero values
   for (i = 0; i < 3; i++) {
     // theta_e * theta_e terms
-    Qw12x12[i][i] = FQWINITTHTH_9DOF_GBY_KALMAN;
+    nxp.Qw12x12[i][i] = FQWINITTHTH_9DOF_GBY_KALMAN;
     // b_e * b_e terms
-    Qw12x12[i + 3][i + 3] = FQWINITBB_9DOF_GBY_KALMAN;
+    nxp.Qw12x12[i + 3][i + 3] = FQWINITBB_9DOF_GBY_KALMAN;
     // th_e * b_e terms
-    Qw12x12[i][i + 3] = Qw12x12[i + 3][i] = FQWINITTHB_9DOF_GBY_KALMAN;
+    nxp.Qw12x12[i][i + 3] = nxp.Qw12x12[i + 3][i] = FQWINITTHB_9DOF_GBY_KALMAN;
     // a_e * a_e terms
-    Qw12x12[i + 6][i + 6] = FQWINITAA_9DOF_GBY_KALMAN;
+    nxp.Qw12x12[i + 6][i + 6] = FQWINITAA_9DOF_GBY_KALMAN;
     // d_e * d_e terms
-    Qw12x12[i + 9][i + 9] = FQWINITDD_9DOF_GBY_KALMAN;
+    nxp.Qw12x12[i + 9][i + 9] = FQWINITDD_9DOF_GBY_KALMAN;
   }
 
   // clear the reset flag
-  resetflag = 0;
+  nxp.resetflag = 0;
 }
 
 /**************************************************************************/
@@ -203,9 +206,8 @@ void Adafruit_NXPSensorFusion::begin(float sampleFrequency) {
  * data.
  */
 /**************************************************************************/
-void Adafruit_NXPSensorFusion::update(float gx, float gy, float gz, float ax,
-                                      float ay, float az, float mx, float my,
-                                      float mz) {
+void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
+            float az, float mx, float my, float mz) {
   float Accel[3] = {ax, ay, az}; // Accel
   float Yp[3] = {gx, gy, gz};    // Gryo
   float Mag[3] = {mx, my, mz};   // Mag
@@ -241,8 +243,8 @@ void Adafruit_NXPSensorFusion::update(float gx, float gy, float gz, float ax,
   int8_t iPivot[6];
 
   // do a reset and return if requested
-  if (resetflag) {
-    begin(1.0f / deltat);
+  if (nxp->resetflag) {
+    *nxp = nxp_begin(1.0f / nxp->deltat);
     return;
   }
 
@@ -257,16 +259,16 @@ void Adafruit_NXPSensorFusion::update(float gx, float gy, float gz, float ax,
   }
 
   // do a once-only orientation lock after the first valid magnetic calibration
-  if (ValidMagCal && !FirstOrientationLock) {
+  if (ValidMagCal && !nxp->FirstOrientationLock) {
     // get the 6DOF orientation matrix and initial inclination angle
-    feCompassNED(RPl, &DeltaPl, Mag, Accel);
+    feCompassNED(nxp->RPl, &nxp->DeltaPl, Mag, Accel);
 
     // get the orientation quaternion from the orientation matrix
-    fQuaternionFromRotationMatrix(RPl, &qPl);
+    fQuaternionFromRotationMatrix(nxp->RPl, &(nxp->qPl));
 
     // set the orientation lock flag so this initial alignment is only performed
     // once
-    FirstOrientationLock = 1;
+    nxp->FirstOrientationLock = 1;
   }
 
   // *********************************************************************************
@@ -275,32 +277,32 @@ void Adafruit_NXPSensorFusion::update(float gx, float gy, float gz, float ax,
 
   // compute the angular velocity from the averaged high frequency gyro reading.
   // omega[k] = yG[k] - b-[k] = yG[k] - b+[k-1] (deg/s)
-  Omega[X] = Yp[X] - bPl[X];
-  Omega[Y] = Yp[Y] - bPl[Y];
-  Omega[Z] = Yp[Z] - bPl[Z];
+  nxp->Omega[X] = Yp[X] - nxp->bPl[X];
+  nxp->Omega[Y] = Yp[Y] - nxp->bPl[Y];
+  nxp->Omega[Z] = Yp[Z] - nxp->bPl[Z];
 
   // initialize the a priori orientation quaternion to the previous a posteriori
   // estimate
-  qMi = qPl;
+  nxp->qMi = nxp->qPl;
 
   // integrate the buffered high frequency (typically 200Hz) gyro readings
   // for (j = 0; j < OVERSAMPLE_RATIO; j++) {
   // compute the incremental fast (typically 200Hz) rotation vector rvec (deg)
   for (i = X; i <= Z; i++) {
-    rvec[i] = (Yp[i] - bPl[i]) * Fastdeltat;
+    rvec[i] = (Yp[i] - nxp->bPl[i]) * nxp->Fastdeltat;
   }
 
   // compute the incremental quaternion fDeltaq from the rotation vector
-  fQuaternionFromRotationVectorDeg(&Deltaq, rvec, 1.0F);
+  fQuaternionFromRotationVectorDeg(&(nxp->Deltaq), rvec, 1.0F);
 
   // incrementally rotate the a priori orientation quaternion fqMi
   // the a posteriori quaternion fqPl is re-normalized later so this update is
   // stable
-  qAeqAxB(&qMi, &Deltaq);
+  qAeqAxB(&nxp->qMi, &nxp->Deltaq);
   //}
 
   // get the a priori rotation matrix from the a priori quaternion
-  fRotationMatrixFromQuaternion(RMi, &qMi);
+  fRotationMatrixFromQuaternion(nxp->RMi, &nxp->qMi);
 
   // *********************************************************************************
   // calculate a priori gyro, accelerometer and magnetometer estimates
@@ -312,26 +314,26 @@ void Adafruit_NXPSensorFusion::update(float gx, float gy, float gz, float ax,
     // compute the a priori gyro estimate of the gravitational vector (g, sensor
     // frame) using an absolute rotation of the global frame gravity vector
     // (with magnitude 1g) NED gravity is along positive z axis
-    gSeGyMi[i] = RMi[i][Z];
+    nxp->gSeGyMi[i] = nxp->RMi[i][Z];
 
     // compute the a priori acceleration (a-) (g, sensor frame) from decayed a
     // posteriori estimate (g, sensor frame)
-    aSeMi[i] = FCA_9DOF_GBY_KALMAN * aSePl[i];
+    nxp->aSeMi[i] = FCA_9DOF_GBY_KALMAN * nxp->aSePl[i];
 
     // compute the a priori gravity error vector (accelerometer minus gyro
     // estimates) (g, sensor frame) NED and Windows 8 have positive sign for
     // gravity: y = g - a and g = y + a
-    gErrSeMi[i] = Accel[i] + aSeMi[i] - gSeGyMi[i];
+    nxp->gErrSeMi[i] = nxp->Accel[i] + nxp->aSeMi[i] - nxp->gSeGyMi[i];
 
     // compute the a priori gyro estimate of the geomagnetic vector (uT, sensor
     // frame) using an absolute rotation of the global frame geomagnetic vector
     // (with magnitude B uT) NED y component of geomagnetic vector in global
     // frame is zero
-    mSeGyMi[i] = RMi[i][X] * mGl[X] + RMi[i][Z] * mGl[Z];
+    nxp->mSeGyMi[i] = nxp->RMi[i][X] * nxp->mGl[X] + nxp->RMi[i][Z] * nxp->mGl[Z];
 
     // compute the a priori geomagnetic error vector (magnetometer minus gyro
     // estimates) (g, sensor frame)
-    mErrSeMi[i] = Mag[i] - mSeGyMi[i];
+    nxp->mErrSeMi[i] = nxp->Mag[i] - nxp->mSeGyMi[i];
   }
 
   // *********************************************************************************
@@ -340,30 +342,30 @@ void Adafruit_NXPSensorFusion::update(float gx, float gy, float gz, float ax,
 
   // update measurement matrix C with -alpha(g-)x and -alpha(m-)x from gyro (g,
   // uT, sensor frame)
-  C6x12[0][1] = FDEGTORAD * gSeGyMi[Z];
-  C6x12[0][2] = -FDEGTORAD * gSeGyMi[Y];
-  C6x12[1][2] = FDEGTORAD * gSeGyMi[X];
-  C6x12[1][0] = -C6x12[0][1];
-  C6x12[2][0] = -C6x12[0][2];
-  C6x12[2][1] = -C6x12[1][2];
-  C6x12[3][1] = FDEGTORAD * mSeGyMi[Z];
-  C6x12[3][2] = -FDEGTORAD * mSeGyMi[Y];
-  C6x12[4][2] = FDEGTORAD * mSeGyMi[X];
-  C6x12[4][0] = -C6x12[3][1];
-  C6x12[5][0] = -C6x12[3][2];
-  C6x12[5][1] = -C6x12[4][2];
-  C6x12[0][4] = -deltat * C6x12[0][1];
-  C6x12[0][5] = -deltat * C6x12[0][2];
-  C6x12[1][5] = -deltat * C6x12[1][2];
-  C6x12[1][3] = -C6x12[0][4];
-  C6x12[2][3] = -C6x12[0][5];
-  C6x12[2][4] = -C6x12[1][5];
-  C6x12[3][4] = -deltat * C6x12[3][1];
-  C6x12[3][5] = -deltat * C6x12[3][2];
-  C6x12[4][5] = -deltat * C6x12[4][2];
-  C6x12[4][3] = -C6x12[3][4];
-  C6x12[5][3] = -C6x12[3][5];
-  C6x12[5][4] = -C6x12[4][5];
+  nxp->C6x12[0][1] = FDEGTORAD * gSeGyMi[Z];
+  nxp->C6x12[0][2] = -FDEGTORAD * gSeGyMi[Y];
+  nxp->C6x12[1][2] = FDEGTORAD * gSeGyMi[X];
+  nxp->C6x12[1][0] = -nxp->C6x12[0][1];
+  nxp->C6x12[2][0] = -nxp->C6x12[0][2];
+  nxp->C6x12[2][1] = -nxp->C6x12[1][2];
+  nxp->C6x12[3][1] = FDEGTORAD * nxp->mSeGyMi[Z];
+  nxp->C6x12[3][2] = -FDEGTORAD * nxp->mSeGyMi[Y];
+  nxp->C6x12[4][2] = FDEGTORAD * nxp->mSeGyMi[X];
+  nxp->C6x12[4][0] = -nxp->C6x12[3][1];
+  nxp->C6x12[5][0] = -nxp->C6x12[3][2];
+  nxp->C6x12[5][1] = -nxp->C6x12[4][2];
+  nxp->C6x12[0][4] = -nxp->deltat * nxp->C6x12[0][1];
+  nxp->C6x12[0][5] = -nxp->deltat * nxp->C6x12[0][2];
+  nxp->C6x12[1][5] = -nxp->deltat * nxp->C6x12[1][2];
+  nxp->C6x12[1][3] = -nxp->C6x12[0][4];
+  nxp->C6x12[2][3] = -nxp->C6x12[0][5];
+  nxp->C6x12[2][4] = -nxp->C6x12[1][5];
+  nxp->C6x12[3][4] = -nxp->deltat * nxp->C6x12[3][1];
+  nxp->C6x12[3][5] = -nxp->deltat * nxp->C6x12[3][2];
+  nxp->C6x12[4][5] = -nxp->deltat * nxp->C6x12[4][2];
+  nxp->C6x12[4][3] = -nxp->C6x12[3][4];
+  nxp->C6x12[5][3] = -nxp->C6x12[3][5];
+  nxp->C6x12[5][4] = -nxp->C6x12[4][5];
 
   // *********************************************************************************
   // calculate the Kalman gain matrix K
