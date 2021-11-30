@@ -32,4 +32,13 @@ mod tests {
         let nxp = NxpFusion::new(150.);
         println!("{nxp:?}");
     }
+
+    #[test]
+    fn update_nxp() {
+        let mut nxp = NxpFusion::new(150.);
+        println!("{nxp:?}");
+
+        nxp.update(1., 2., 3., 4., 5., 6., 0., 0., 0.);
+        println!("{nxp:?}");
+    }
 }
