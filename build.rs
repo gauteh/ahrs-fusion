@@ -2,20 +2,22 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    println!("cargo:rustc-link-lib=ahrs");
+    println!("cargo:lib=ahrs");
+    println!("cargo:rustc-link-lib=static=ahrs");
+
     cc::Build::new()
         .warnings(false)
         .cpp(true)
         .include("ahrs")
-        .file("ahrs/nxp_matrix.c")
+        .file("ahrs/nxp_matrix.cpp")
         .file("ahrs/nxp.cpp")
-        .file("ahrs/wrapper.c")
+        .file("ahrs/wrapper.cpp")
         .compile("ahrs");
 
     println!("cargo:rerun-if-changed=ahrs/*");
 
     let bindings = bindgen::Builder::default()
-        .header("ahrs/wrapper.h")
+        .header("ahrs/wrapper.hpp")
         .use_core()
         .ctypes_prefix("cty")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))

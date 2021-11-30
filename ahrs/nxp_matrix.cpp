@@ -38,6 +38,7 @@
 #define Y 1
 #define Z 2
 
+extern "C" {
 // function sets the 3x3 matrix A to the identity matrix
 void f3x3matrixAeqI(float A[][3]) {
   float *pAij; // pointer to A[i][j]
@@ -464,4 +465,5 @@ void fmatrixAeqRenormRotA(float A[][3]) {
   A[X][Z] = A[Y][X] * A[Z][Y] - A[Z][X] * A[Y][Y];
   A[Y][Z] = A[Z][X] * A[X][Y] - A[X][X] * A[Z][Y];
   A[Z][Z] = A[X][X] * A[Y][Y] - A[Y][X] * A[X][Y];
+}
 }

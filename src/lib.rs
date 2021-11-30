@@ -1,30 +1,35 @@
 #![cfg_attr(not(test), no_std)]
 
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
+// extern crate ahrs;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+mod nxp;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct NxpFusion {
     freq: f32,
+    nxp: nxp::Nxp
 }
 
 impl NxpFusion {
     pub fn new(freq: f32) -> NxpFusion {
-        NxpFusion { freq }
+        NxpFusion { freq, nxp: unsafe { nxp::nxp_c_begin(freq) } }
     }
 
     pub fn update(&mut self, gx: f32, gy: f32, gz: f32, ax: f32, ay: f32, az: f32, mx: f32, my: f32, mz: f32) {
+        let nxp = &mut self.nxp as *mut nxp::Nxp;
+        unsafe {
+            nxp::nxp_c_update(nxp, gx, gy, gz, ax, ay, az, mx, my, mz);
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    fn instantiate_nxp() {
+        let nxp = NxpFusion::new(150.);
+        println!("{nxp:?}");
     }
 }
