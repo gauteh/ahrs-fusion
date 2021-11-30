@@ -35,7 +35,9 @@
  * inevitable) that you screw it up.
  */
 
-#include "Adafruit_AHRS_NXPFusion.h"
+#include "nxp.hpp"
+#include "nxp_impl.hpp"
+
 #include <math.h>
 #include <stdint.h>
 
@@ -78,7 +80,7 @@
 #define ONEOVER48 0.02083333333F     // 1 / 48
 #define ONEOVER3840 0.0002604166667F // 1 / 3840
 
-#define Quaternion_t Adafruit_NXPSensorFusion::Quaternion_t
+/* #define Quaternion_t Adafruit_NXPSensorFusion::Quaternion_t */
 
 static void fqAeq1(Quaternion_t *pqA);
 static void feCompassNED(float fR[][3], float *pfDelta, const float fBc[],
@@ -198,6 +200,8 @@ Nxp nxp_begin(float sampleFrequency) {
 
   // clear the reset flag
   nxp.resetflag = 0;
+
+  return nxp;
 }
 
 /**************************************************************************/
@@ -323,7 +327,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
     // compute the a priori gravity error vector (accelerometer minus gyro
     // estimates) (g, sensor frame) NED and Windows 8 have positive sign for
     // gravity: y = g - a and g = y + a
-    nxp->gErrSeMi[i] = nxp->Accel[i] + nxp->aSeMi[i] - nxp->gSeGyMi[i];
+    nxp->gErrSeMi[i] = Accel[i] + nxp->aSeMi[i] - nxp->gSeGyMi[i];
 
     // compute the a priori gyro estimate of the geomagnetic vector (uT, sensor
     // frame) using an absolute rotation of the global frame geomagnetic vector
@@ -333,7 +337,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
 
     // compute the a priori geomagnetic error vector (magnetometer minus gyro
     // estimates) (g, sensor frame)
-    nxp->mErrSeMi[i] = nxp->Mag[i] - nxp->mSeGyMi[i];
+    nxp->mErrSeMi[i] = Mag[i] - nxp->mSeGyMi[i];
   }
 
   // *********************************************************************************
@@ -342,9 +346,9 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
 
   // update measurement matrix C with -alpha(g-)x and -alpha(m-)x from gyro (g,
   // uT, sensor frame)
-  nxp->C6x12[0][1] = FDEGTORAD * gSeGyMi[Z];
-  nxp->C6x12[0][2] = -FDEGTORAD * gSeGyMi[Y];
-  nxp->C6x12[1][2] = FDEGTORAD * gSeGyMi[X];
+  nxp->C6x12[0][1] = FDEGTORAD * nxp->gSeGyMi[Z];
+  nxp->C6x12[0][2] = -FDEGTORAD * nxp->gSeGyMi[Y];
+  nxp->C6x12[1][2] = FDEGTORAD * nxp->gSeGyMi[X];
   nxp->C6x12[1][0] = -nxp->C6x12[0][1];
   nxp->C6x12[2][0] = -nxp->C6x12[0][2];
   nxp->C6x12[2][1] = -nxp->C6x12[1][2];
@@ -387,10 +391,10 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
       *pftmpA12x6ij = 0.0F;
 
       // initialize pfC6x12jk for current j, k=0
-      pfC6x12jk = C6x12[j];
+      pfC6x12jk = nxp->C6x12[j];
 
       // initialize pfQw12x12ik for current i, k=0
-      pfQw12x12ik = Qw12x12[i];
+      pfQw12x12ik = nxp->Qw12x12[i];
 
       // sum matrix products over inner loop over k
       for (k = 0; k < 12; k++) {
@@ -418,14 +422,14 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // both C and ftmpA12x6 are sparse but not symmetric
   for (i = 0; i < 6; i++) { // loop over rows of P+
     // initialize pfPPlus12x12ij for current i, j=i
-    pfPPlus12x12ij = PPlus12x12[i] + i;
+    pfPPlus12x12ij = nxp->PPlus12x12[i] + i;
 
     for (j = i; j < 6; j++) { // loop over above diagonal columns of P+
       // zero P+[i][j]
       *pfPPlus12x12ij = 0.0F;
 
       // initialize pfC6x12ik for current i, k=0
-      pfC6x12ik = C6x12[i];
+      pfC6x12ik = nxp->C6x12[i];
 
       // initialize pftmpA12x6kj for current j, k=0
       pftmpA12x6kj = *ftmpA12x6 + j;
@@ -452,23 +456,23 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   }
 
   // add in noise covariance terms to the diagonal
-  PPlus12x12[0][0] += QvAA;
-  PPlus12x12[1][1] += QvAA;
-  PPlus12x12[2][2] += QvAA;
-  PPlus12x12[3][3] += QvMM;
-  PPlus12x12[4][4] += QvMM;
-  PPlus12x12[5][5] += QvMM;
+  nxp->PPlus12x12[0][0] += nxp->QvAA;
+  nxp->PPlus12x12[1][1] += nxp->QvAA;
+  nxp->PPlus12x12[2][2] += nxp->QvAA;
+  nxp->PPlus12x12[3][3] += nxp->QvMM;
+  nxp->PPlus12x12[4][4] += nxp->QvMM;
+  nxp->PPlus12x12[5][5] += nxp->QvMM;
 
   // copy above diagonal elements of P+ (6x6 scratch sub-matrix) to below
   // diagonal
   for (i = 1; i < 6; i++)
     for (j = 0; j < i; j++)
-      PPlus12x12[i][j] = PPlus12x12[j][i];
+      nxp->PPlus12x12[i][j] = nxp->PPlus12x12[j][i];
 
   // calculate inverse of P+ (6x6 scratch sub-matrix) = inv(C * P- * C^T + Qv) =
   // inv(C * Qw * C^T + Qv)
   for (i = 0; i < 6; i++) {
-    pfRows[i] = PPlus12x12[i];
+    pfRows[i] = nxp->PPlus12x12[i];
   }
   fmatrixAeqInvA(pfRows, iColInd, iRowInd, iPivot, 3);
 
@@ -477,7 +481,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // (6x6 sub-matrix) is not K is not symmetric because C is not symmetric
   for (i = 0; i < 12; i++) { // loop over rows of K12x6
     // initialize pfK12x6ij for current i, j=0
-    pfK12x6ij = K12x6[i];
+    pfK12x6ij = nxp->K12x6[i];
 
     for (j = 0; j < 6; j++) { // loop over columns of K12x6
       // zero the matrix element fK12x6[i][j]
@@ -487,7 +491,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
       pftmpA12x6ik = ftmpA12x6[i];
 
       // initialize pfPPlus12x12kj for current j, k=0
-      pfPPlus12x12kj = *PPlus12x12 + j;
+      pfPPlus12x12kj = *(nxp->PPlus12x12) + j;
 
       // sum matrix products over inner loop over k
       for (k = 0; k < 6; k++) {
@@ -513,22 +517,22 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // component only for fThErrPl, fbErrPl, faErrSePl but also magnetometer for
   // fdErrSePl
   for (i = X; i <= Z; i++) {
-    ThErrPl[i] = K12x6[i][0] * gErrSeMi[X] + K12x6[i][1] * gErrSeMi[Y] +
-                 K12x6[i][2] * gErrSeMi[Z];
-    bErrPl[i] = K12x6[i + 3][0] * gErrSeMi[X] + K12x6[i + 3][1] * gErrSeMi[Y] +
-                K12x6[i + 3][2] * gErrSeMi[Z];
-    aErrSePl[i] = K12x6[i + 6][0] * gErrSeMi[X] +
-                  K12x6[i + 6][1] * gErrSeMi[Y] + K12x6[i + 6][2] * gErrSeMi[Z];
-    dErrSePl[i] =
-        K12x6[i + 9][0] * gErrSeMi[X] + K12x6[i + 9][1] * gErrSeMi[Y] +
-        K12x6[i + 9][2] * gErrSeMi[Z] + K12x6[i + 9][3] * mErrSeMi[X] +
-        K12x6[i + 9][4] * mErrSeMi[Y] + K12x6[i + 9][5] * mErrSeMi[Z];
+    nxp->ThErrPl[i] = nxp->K12x6[i][0] * nxp->gErrSeMi[X] + nxp->K12x6[i][1] * nxp->gErrSeMi[Y] +
+                 nxp->K12x6[i][2] * nxp->gErrSeMi[Z];
+    nxp->bErrPl[i] = nxp->K12x6[i + 3][0] * nxp->gErrSeMi[X] + nxp->K12x6[i + 3][1] * nxp->gErrSeMi[Y] +
+                nxp->K12x6[i + 3][2] * nxp->gErrSeMi[Z];
+    nxp->aErrSePl[i] = nxp->K12x6[i + 6][0] * nxp->gErrSeMi[X] +
+                  nxp->K12x6[i + 6][1] * nxp->gErrSeMi[Y] + nxp->K12x6[i + 6][2] * nxp->gErrSeMi[Z];
+    nxp->dErrSePl[i] =
+        nxp->K12x6[i + 9][0] * nxp->gErrSeMi[X] + nxp->K12x6[i + 9][1] * nxp->gErrSeMi[Y] +
+        nxp->K12x6[i + 9][2] * nxp->gErrSeMi[Z] + nxp->K12x6[i + 9][3] * nxp->mErrSeMi[X] +
+        nxp->K12x6[i + 9][4] * nxp->mErrSeMi[Y] + nxp->K12x6[i + 9][5] * nxp->mErrSeMi[Z];
   }
 
   // set the magnetic jamming flag if there is a significant magnetic error
   // power after calibration
-  ftmp = dErrSePl[X] * dErrSePl[X] + dErrSePl[Y] * dErrSePl[Y] +
-         dErrSePl[Z] * dErrSePl[Z];
+  ftmp = nxp->dErrSePl[X] * nxp->dErrSePl[X] + nxp->dErrSePl[Y] * nxp->dErrSePl[Y] +
+         nxp->dErrSePl[Z] * nxp->dErrSePl[Z];
   // iMagJamming = (ValidMagCal) && (ftmp > MagCal->FourBsq);
   iMagJamming = (ValidMagCal) &&
                 (ftmp > (DEFAULTB * DEFAULTB * 4.0f)); // TODO: FourBsq....
@@ -537,14 +541,14 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // magnetic jamming
   if (ValidMagCal && !iMagJamming) {
     for (i = X; i <= Z; i++) {
-      ThErrPl[i] += K12x6[i][3] * mErrSeMi[X] + K12x6[i][4] * mErrSeMi[Y] +
-                    K12x6[i][5] * mErrSeMi[Z];
-      bErrPl[i] += K12x6[i + 3][3] * mErrSeMi[X] +
-                   K12x6[i + 3][4] * mErrSeMi[Y] +
-                   K12x6[i + 3][5] * mErrSeMi[Z];
-      aErrSePl[i] += K12x6[i + 6][3] * mErrSeMi[X] +
-                     K12x6[i + 6][4] * mErrSeMi[Y] +
-                     K12x6[i + 6][5] * mErrSeMi[Z];
+      nxp->ThErrPl[i] += nxp->K12x6[i][3] * nxp->mErrSeMi[X] + nxp->K12x6[i][4] * nxp->mErrSeMi[Y] +
+                    nxp->K12x6[i][5] * nxp->mErrSeMi[Z];
+      nxp->bErrPl[i] += nxp->K12x6[i + 3][3] * nxp->mErrSeMi[X] +
+                   nxp->K12x6[i + 3][4] * nxp->mErrSeMi[Y] +
+                   nxp->K12x6[i + 3][5] * nxp->mErrSeMi[Z];
+      nxp->aErrSePl[i] += nxp->K12x6[i + 6][3] * nxp->mErrSeMi[X] +
+                     nxp->K12x6[i + 6][4] * nxp->mErrSeMi[Y] +
+                     nxp->K12x6[i + 6][5] * nxp->mErrSeMi[Z];
     }
   }
 
@@ -553,46 +557,46 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // *********************************************************************************
 
   // get the a posteriori delta quaternion
-  fQuaternionFromRotationVectorDeg(&Deltaq, ThErrPl, -1.0F);
+  fQuaternionFromRotationVectorDeg(&nxp->Deltaq, nxp->ThErrPl, -1.0F);
 
   // compute the a posteriori orientation quaternion fqPl = fqMi *
   // Deltaq(-thetae+) the resulting quaternion may have negative scalar
   // component q0
-  qAeqBxC(&qPl, &qMi, &Deltaq);
+  qAeqBxC(&nxp->qPl, &nxp->qMi, &nxp->Deltaq);
 
   // normalize the a posteriori orientation quaternion to stop error propagation
   // the renormalization function ensures that the scalar component q0 is
   // non-negative
-  fqAeqNormqA(&qPl);
+  fqAeqNormqA(&nxp->qPl);
 
   // compute the a posteriori rotation matrix from the a posteriori quaternion
-  fRotationMatrixFromQuaternion(RPl, &qPl);
+  fRotationMatrixFromQuaternion(nxp->RPl, &nxp->qPl);
 
   // compute the rotation vector from the a posteriori quaternion
-  fRotationVectorDegFromQuaternion(&qPl, RVecPl);
+  fRotationVectorDegFromQuaternion(&nxp->qPl, nxp->RVecPl);
 
   // update the a posteriori gyro offset vector b+ and
   // assign the entire linear acceleration error vector to update the linear
   // acceleration
   for (i = X; i <= Z; i++) {
     // b+[k] = b-[k] - be+[k] = b+[k] - be+[k] (deg/s)
-    bPl[i] -= bErrPl[i];
+    nxp->bPl[i] -= nxp->bErrPl[i];
     // a+ = a- - ae+ (g, sensor frame)
-    aSePl[i] = aSeMi[i] - aErrSePl[i];
+    nxp->aSePl[i] = nxp->aSeMi[i] - nxp->aErrSePl[i];
   }
 
   // compute the linear acceleration in the global frame from the accelerometer
   // measurement (sensor frame). de-rotate the accelerometer measurement from
   // the sensor to global frame using the inverse (transpose) of the a
   // posteriori rotation matrix
-  aGlPl[X] = RPl[X][X] * Accel[X] + RPl[Y][X] * Accel[Y] + RPl[Z][X] * Accel[Z];
-  aGlPl[Y] = RPl[X][Y] * Accel[X] + RPl[Y][Y] * Accel[Y] + RPl[Z][Y] * Accel[Z];
-  aGlPl[Z] = RPl[X][Z] * Accel[X] + RPl[Y][Z] * Accel[Y] + RPl[Z][Z] * Accel[Z];
+  nxp->aGlPl[X] = nxp->RPl[X][X] * Accel[X] + nxp->RPl[Y][X] * Accel[Y] + nxp->RPl[Z][X] * Accel[Z];
+  nxp->aGlPl[Y] = nxp->RPl[X][Y] * Accel[X] + nxp->RPl[Y][Y] * Accel[Y] + nxp->RPl[Z][Y] * Accel[Z];
+  nxp->aGlPl[Z] = nxp->RPl[X][Z] * Accel[X] + nxp->RPl[Y][Z] * Accel[Y] + nxp->RPl[Z][Z] * Accel[Z];
   // remove gravity and correct the sign if the coordinate system is gravity
   // positive / acceleration negative gravity positive NED
-  aGlPl[X] = -aGlPl[X];
-  aGlPl[Y] = -aGlPl[Y];
-  aGlPl[Z] = -(aGlPl[Z] - 1.0F);
+  nxp->aGlPl[X] = -nxp->aGlPl[X];
+  nxp->aGlPl[Y] = -nxp->aGlPl[Y];
+  nxp->aGlPl[Z] = -(nxp->aGlPl[Z] - 1.0F);
 
   // update the reference geomagnetic vector using magnetic disturbance error if
   // valid calibration and no jamming
@@ -600,15 +604,15 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
     // de-rotate the NED magnetic disturbance error de+ from the sensor to the
     // global reference frame using the inverse (transpose) of the a posteriori
     // rotation matrix
-    dErrGlPl[X] = RPl[X][X] * dErrSePl[X] + RPl[Y][X] * dErrSePl[Y] +
-                  RPl[Z][X] * dErrSePl[Z];
-    dErrGlPl[Z] = RPl[X][Z] * dErrSePl[X] + RPl[Y][Z] * dErrSePl[Y] +
-                  RPl[Z][Z] * dErrSePl[Z];
+    nxp->dErrGlPl[X] = nxp->RPl[X][X] * nxp->dErrSePl[X] + nxp->RPl[Y][X] * nxp->dErrSePl[Y] +
+                  nxp->RPl[Z][X] * nxp->dErrSePl[Z];
+    nxp->dErrGlPl[Z] = nxp->RPl[X][Z] * nxp->dErrSePl[X] + nxp->RPl[Y][Z] * nxp->dErrSePl[Y] +
+                  nxp->RPl[Z][Z] * nxp->dErrSePl[Z];
 
     // compute components of the new geomagnetic vector
     // the north pointing component fadj must always be non-negative
-    fopp = mGl[Z] - dErrGlPl[Z];
-    fadj = mGl[X] - dErrGlPl[X];
+    fopp = nxp->mGl[Z] - nxp->dErrGlPl[Z];
+    fadj = nxp->mGl[X] - nxp->dErrGlPl[X];
     if (fadj < 0.0F) {
       fadj = 0.0F;
     }
@@ -631,11 +635,11 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
       }
 
       // compute the new geomagnetic vector (always north pointing)
-      DeltaPl = fasin_deg(fsindelta);
+      nxp->DeltaPl = fasin_deg(fsindelta);
       // mGl[X] = MagCal->B * fcosdelta;  // TODO: MagCal->B
       // mGl[Z] = MagCal->B * fsindelta;
-      mGl[X] = DEFAULTB * fcosdelta; // TODO: MagCal->B
-      mGl[Z] = DEFAULTB * fsindelta;
+      nxp->mGl[X] = DEFAULTB * fcosdelta; // TODO: MagCal->B
+      nxp->mGl[Z] = DEFAULTB * fsindelta;
     } // end hyp == 0.0F
   }   // end ValidMagCal
 
@@ -644,7 +648,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // *********************************************************************************
 
   // calculate the NED Euler angles
-  fNEDAnglesDegFromRotationMatrix(RPl, &PhiPl, &ThePl, &PsiPl, &RhoPl, &ChiPl);
+  fNEDAnglesDegFromRotationMatrix(nxp->RPl, &nxp->PhiPl, &nxp->ThePl, &nxp->PsiPl, &nxp->RhoPl, &nxp->ChiPl);
 
   // ***********************************************************************************
   // calculate (symmetric) a posteriori error covariance matrix P+
@@ -658,17 +662,17 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // entries the resulting matrix is sparse but not symmetric
   for (i = 0; i < 6; i++) {
     // initialize pfPPlus12x12ij for current i, j=0
-    pfPPlus12x12ij = PPlus12x12[i];
+    pfPPlus12x12ij = nxp->PPlus12x12[i];
 
     for (j = 0; j < 12; j++) {
       // zero P+[i][j]
       *pfPPlus12x12ij = 0.0F;
 
       // initialize pfC6x12ik for current i, k=0
-      pfC6x12ik = C6x12[i];
+      pfC6x12ik = nxp->C6x12[i];
 
       // initialize pfQw12x12kj for current j, k=0
-      pfQw12x12kj = &Qw12x12[0][j];
+      pfQw12x12kj = &nxp->Qw12x12[0][j];
 
       // sum matrix products over inner loop over k
       for (k = 0; k < 12; k++) {
@@ -698,14 +702,14 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // computed since P+ is symmetric
   for (i = 0; i < 12; i++) {
     // initialize pfQw12x12ij for current i, j=i
-    pfQw12x12ij = Qw12x12[i] + i;
+    pfQw12x12ij = nxp->Qw12x12[i] + i;
 
     for (j = i; j < 12; j++) {
       // initialize pfK12x6ik for current i, k=0
-      pfK12x6ik = K12x6[i];
+      pfK12x6ik = nxp->K12x6[i];
 
       // initialize pfPPlus12x12kj for current j, k=0
-      pfPPlus12x12kj = *PPlus12x12 + j;
+      pfPPlus12x12kj = *nxp->PPlus12x12 + j;
 
       // compute on and above diagonal matrix entry
       for (k = 0; k < 6; k++) {
@@ -729,8 +733,8 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // after execution of this code P+ is valid but Qw remains invalid
   for (i = 0; i < 12; i++) {
     // initialize pfPPlus12x12ij and pfQw12x12ij for current i, j=i
-    pfPPlus12x12ij = PPlus12x12[i] + i;
-    pfQw12x12ij = Qw12x12[i] + i;
+    pfPPlus12x12ij = nxp->PPlus12x12[i] + i;
+    pfQw12x12ij = nxp->Qw12x12[i] + i;
 
     // copy the on-diagonal elements and increment pointers to enter loop at
     // j=i+1
@@ -738,7 +742,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
 
     // loop over above diagonal columns j copying to below-diagonal elements
     for (j = i + 1; j < 12; j++) {
-      *(pfPPlus12x12ij++) = PPlus12x12[j][i] = *(pfQw12x12ij++);
+      *(pfPPlus12x12ij++) = nxp->PPlus12x12[j][i] = *(pfQw12x12ij++);
     }
   }
 
@@ -751,7 +755,7 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   // zero the matrix Qw
   for (i = 0; i < 12; i++) {
     for (j = 0; j < 12; j++) {
-      Qw12x12[i][j] = 0.0F;
+      nxp->Qw12x12[i][j] = 0.0F;
     }
   }
 
@@ -759,23 +763,23 @@ void nxp_update(Nxp *nxp, float gx, float gy, float gz, float ax, float ay,
   for (i = 0; i < 3; i++) {
     // Qw[th-th-] = Qw[0-2][0-2] = E[th-(th-)^T] = Q[th+th+] + deltat^2 *
     // (Q[b+b+] + (Qwb + QvG) * I)
-    Qw12x12[i][i] =
-        PPlus12x12[i][i] + deltatsq * (PPlus12x12[i + 3][i + 3] + QwbplusQvG);
+    nxp->Qw12x12[i][i] =
+        nxp->PPlus12x12[i][i] + nxp->deltatsq * (nxp->PPlus12x12[i + 3][i + 3] + nxp->QwbplusQvG);
 
     // Qw[b-b-] = Qw[3-5][3-5] = E[b-(b-)^T] = Q[b+b+] + Qwb * I
-    Qw12x12[i + 3][i + 3] = PPlus12x12[i + 3][i + 3] + FQWB_9DOF_GBY_KALMAN;
+    nxp->Qw12x12[i + 3][i + 3] = nxp->PPlus12x12[i + 3][i + 3] + FQWB_9DOF_GBY_KALMAN;
 
     // Qw[th-b-] = Qw[0-2][3-5] = E[th-(b-)^T] = -deltat * (Q[b+b+] + Qwb * I) =
     // -deltat * Qw[b-b-]
-    Qw12x12[i][i + 3] = Qw12x12[i + 3][i] = -deltat * Qw12x12[i + 3][i + 3];
+    nxp->Qw12x12[i][i + 3] = nxp->Qw12x12[i + 3][i] = -nxp->deltat * nxp->Qw12x12[i + 3][i + 3];
 
     // Qw[a-a-] = Qw[6-8][6-8] = E[a-(a-)^T] = ca^2 * Q[a+a+] + Qwa * I
-    Qw12x12[i + 6][i + 6] =
-        casq * PPlus12x12[i + 6][i + 6] + FQWA_9DOF_GBY_KALMAN;
+    nxp->Qw12x12[i + 6][i + 6] =
+        nxp->casq * nxp->PPlus12x12[i + 6][i + 6] + FQWA_9DOF_GBY_KALMAN;
 
     // Qw[d-d-] = Qw[9-11][9-11] = E[d-(d-)^T] = cd^2 * Q[d+d+] + Qwd * I
-    Qw12x12[i + 9][i + 9] =
-        cdsq * PPlus12x12[i + 9][i + 9] + FQWD_9DOF_GBY_KALMAN;
+    nxp->Qw12x12[i + 9][i + 9] =
+        nxp->cdsq * nxp->PPlus12x12[i + 9][i + 9] + FQWD_9DOF_GBY_KALMAN;
   }
 }
 

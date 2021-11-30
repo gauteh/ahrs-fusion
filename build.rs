@@ -2,27 +2,29 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Tell cargo to tell rustc to link the system bzip2
-    // shared library.
-    // println!("cargo:rustc-link-lib=bz2");
+    println!("cargo:rustc-link-lib=ahrs");
     cc::Build::new()
         .warnings(false)
+        .cpp(true)
         .include("ahrs")
-        .file("ahrs/Adafruit_AHRS_NXPmatrix.c")
-        .file("ahrs/Adafruit_AHRS_NXPFusion.cpp")
+        .file("ahrs/nxp_matrix.c")
+        .file("ahrs/nxp.cpp")
         .file("ahrs/wrapper.c")
         .compile("ahrs");
 
-    // Tell cargo to invalidate the built crate whenever the wrapper changes
-    // println!("cargo:rerun-if-changed=ahrs/wrapper.h");
+    println!("cargo:rerun-if-changed=ahrs/*");
 
-    // cxx_build::bridge("src/ffi.rs")
-    //     .include("ahrs")
-    //     .file("ahrs/Adafruit_AHRS_NXPFusion.cpp")
-    //     .flag_if_supported("-std=c++14")
-    //     .compile("ahrs");
+    let bindings = bindgen::Builder::default()
+        .header("ahrs/wrapper.h")
+        .use_core()
+        .ctypes_prefix("cty")
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .generate()
+        .expect("Unable to generate bindings");
 
-    // println!("cargo:rerun-if-changed=src/main.rs");
-    // println!("cargo:rerun-if-changed=src/blobstore.cc");
-    // println!("cargo:rerun-if-changed=include/blobstore.h");
+    // Write the bindings to the $OUT_DIR/bindings.rs file.
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    bindings
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Couldn't write bindings!");
 }
