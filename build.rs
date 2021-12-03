@@ -8,6 +8,7 @@ fn main() {
     cc::Build::new()
         .warnings(false)
         .cpp(true)
+        .cpp_link_stdlib(None)
         .include("ahrs")
         .file("ahrs/nxp_matrix.cpp")
         .file("ahrs/nxp.cpp")
