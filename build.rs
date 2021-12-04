@@ -15,7 +15,7 @@ fn main() {
         .file("ahrs/wrapper.cpp")
         .compile("ahrs");
 
-    println!("cargo:rerun-if-changed=ahrs/*");
+    println!("cargo:rerun-if-changed=ahrs");
 
     let bindings = bindgen::Builder::default()
         .header("ahrs/wrapper.hpp")
