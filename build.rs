@@ -6,7 +6,6 @@ fn main() {
     println!("cargo:rustc-link-lib=static=ahrs");
 
     cc::Build::new()
-        .warnings(false)
         .cpp(true)
         .cpp_link_stdlib(None)
         .include("ahrs")
