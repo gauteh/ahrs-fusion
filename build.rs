@@ -6,6 +6,7 @@ fn main() {
     println!("cargo:rustc-link-lib=static=ahrs");
 
     cc::Build::new()
+        .warnings(true)
         .cpp(true)
         .cpp_link_stdlib(None)
         .include("ahrs")
@@ -20,6 +21,7 @@ fn main() {
         .header("ahrs/wrapper.hpp")
         .use_core()
         .ctypes_prefix("cty")
+        .detect_include_paths(true)
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .derive_eq(true)
         .generate()
