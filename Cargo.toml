@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Port of NXP Sensor Fusion (as written by Adafruit)"
 license-file = "LICENSE"
+repository = "https://github.com/gauteh/ahrs-fusion"
 authors = ["Gaute Hope <eg@agute.vetsj.com>"]
 
 [dependencies]
