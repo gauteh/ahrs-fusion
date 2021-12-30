@@ -9,7 +9,15 @@ authors = ["Gaute Hope <eg@agute.vetsj.com>"]
 
 [dependencies]
 cty = "0"
+micromath = { version = "2", optional = true, features = [ "quaternion", "vector" ]}
 
 [build-dependencies]
 cc = "1"
 bindgen = "0"
+
+[features]
+build-bin = [ "micromath" ]
+
+[[bin]]
+name = "ahrs-csv"
+required-features = [ "build-bin" ]
