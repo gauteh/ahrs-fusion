@@ -23,6 +23,18 @@ crate:
 extern crate cmsis_dsp;
 ```
 
+## Using from the command-line
+
+There is also a small command line utility that takes as its argument the
+frequency, and reads accelerometer and gyroscope from stdin as CSV. It outputs
+the rotated acceleration for every line. It can be built or installed by
+enabling the `build-bin` feature flag:
+
+```
+$ cargo install --feature build-bin --path .
+$ echo 1,2,3,4,5,6 | ahrs-csv 10
+```
+
 ## Resources
 
 * https://github.com/adafruit/Adafruit_AHRS

@@ -33,19 +33,10 @@ fn main() {
 
     let mut filter = NxpFusion::new(freq);
 
-    let mut buffer = String::new();
-    let mut input = io::BufReader::new(io::stdin());
-    while let Ok(sz) = input.read_line(&mut buffer) {
-        if sz < 1 {
-            return;
-        }
-
-        let components = buffer
-            .trim()
-            .split(',')
-            .map(|c| c.parse::<f32>())
-            .collect::<Result<Vec<f32>, _>>()
-            .expect(&format!("could not parse line: {}", buffer));
+    let input = io::BufReader::new(io::stdin());
+    for buffer in input.lines() {
+        let buffer = buffer.unwrap();
+        let components = parse_line(&buffer);
 
         if components.len() != 6 {
             eprintln!("not 6 components in line: {}", buffer);
@@ -74,5 +65,41 @@ fn main() {
 
         let axl = q.rotate(axl);
         println!("{},{},{}", axl.x, axl.y, axl.z);
+    }
+}
+
+fn parse_line(buffer: &str) -> Vec<f32> {
+    buffer
+        .trim()
+        .split(',')
+        .map(|c| {
+            c.parse::<f32>().expect(&format!("could not parse value: '{}' in line '{}'", c, buffer))
+        })
+        .collect::<Vec<_>>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_positive() {
+        let buf = "1.0,2.0,3.0,4.0,5.0,6.0";
+        let cmp = parse_line(&buf);
+        assert_eq!(cmp, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn parse_negative() {
+        let buf = "1.0,-2.0,3.0,4.0,5.0,6.0";
+        let cmp = parse_line(&buf);
+        assert_eq!(cmp, [1.0, -2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn parse_swift() {
+        let buf = "8.451449,2.967100,4.603791,-4.062500,-8.937500,-2.718750";
+        let cmp = parse_line(&buf);
+        assert_eq!(cmp, [8.451449, 2.967100, 4.603791, -4.062500, -8.937500, -2.718750]);
     }
 }
