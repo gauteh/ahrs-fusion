@@ -19,6 +19,11 @@ impl NxpFusion {
         }
     }
 
+    /// Reset and initialize filter.
+    pub fn reset(&mut self) {
+        self.nxp = unsafe { nxp::nxp_c_begin(self.freq) };
+    }
+
     /// Updates the filter with new gyroscope, accelerometer, and
     /// magnetometer data. For roll, pitch, and yaw the accelerometer values can be
     /// either m/s^2 or g, but for linear acceleration they have to be in g.
