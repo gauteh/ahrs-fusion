@@ -128,7 +128,7 @@ void fmatrixAeqRenormRotA(float A[][3]);
 Nxp nxp_begin(float sampleFrequency) {
   int8_t i, j;
 
-  Nxp nxp;
+  Nxp nxp = Nxp();
 
   // reset the flag denoting that a first 9DOF orientation lock has been
   // achieved
