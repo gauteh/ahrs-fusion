@@ -135,6 +135,35 @@ mod tests {
     }
 
     #[test]
+    fn nxp_t_begin() {
+        assert_eq!(50.0, 50.0);
+        assert_eq!(0.006666666666667, 0.006666666666667);
+        let nxp0 = unsafe { nxp::nxp_c_begin(150.) };
+        let nxp1 = unsafe { nxp::nxp_c_begin(150.) };
+
+        assert_eq!(nxp0, nxp1);
+
+    }
+
+    #[test]
+    fn reset_nxp() {
+        let mut nxp = NxpFusion::new(150.);
+        let mut nxp1 = NxpFusion::new(150.);
+        assert_eq!(nxp1, nxp);
+        println!("nxp = {nxp:#?}");
+        println!("nxp1 = {nxp1:#?}");
+
+        nxp.update(1., 2., 3., 4., 5., 6., 0., 0., 0.);
+        println!("nxp = {nxp:#?}");
+        println!("nxp1 = {nxp1:#?}");
+        // assert_ne!(nxp1, nxp);
+
+        // nxp.reset();
+        // nxp1.reset();
+        // assert_eq!(nxp1, nxp);
+    }
+
+    #[test]
     fn set_and_get_quaternion() {
         let mut nxp = NxpFusion::new(150.);
         nxp.set_quaternion([0.5, 1., 2., 3.]);
