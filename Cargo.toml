@@ -1,15 +1,20 @@
 [package]
 name = "ahrs-fusion"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Port of NXP Sensor Fusion (as written by Adafruit)"
 license-file = "LICENSE"
 repository = "https://github.com/gauteh/ahrs-fusion"
 authors = ["Gaute Hope <eg@agute.vetsj.com>"]
 
+[lib]
+name = "ahrs_fusion"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 cty = "0"
 micromath = { version = "2", optional = true, features = [ "quaternion", "vector" ]}
+pyo3 = { version = "0.16.3", optional = true, features = ["extension-module", "abi3-py39"] }
 
 [build-dependencies]
 cc = "1"
@@ -17,6 +22,7 @@ bindgen = "0"
 
 [features]
 build-bin = [ "micromath" ]
+python = [ "pyo3" ]
 
 [[bin]]
 name = "ahrs-csv"

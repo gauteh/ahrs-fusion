@@ -1,17 +1,33 @@
-#![cfg_attr(not(test), no_std)]
+#![feature(cfg_eval)]
+#![cfg_attr(all(not(test), not(feature = "python")), no_std)]
+
+#[cfg(feature = "python")]
+use pyo3::{prelude::*, basic::CompareOp, exceptions};
 
 mod nxp;
 
+#[cfg(feature = "python")]
+#[pymodule]
+fn ahrs_fusion(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<NxpFusion>()?;
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct NxpFusion {
     freq: f32,
     nxp: nxp::Nxp,
 }
 
+#[cfg_eval]
+#[cfg_attr(feature = "python", pymethods)]
 impl NxpFusion {
     /// Initializes the 9DOF Kalman filter.
     ///
     /// freq: The sensor sample rate in Herz (`s^-1`).
+    #[cfg_attr(feature = "python", staticmethod)]
     pub fn new(freq: f32) -> NxpFusion {
         NxpFusion {
             freq,
@@ -58,23 +74,28 @@ impl NxpFusion {
         }
     }
 
+    #[cfg_attr(feature = "python", getter)]
     pub fn freq(&self) -> f32 {
         self.freq
     }
 
+    #[cfg_attr(feature = "python", getter)]
     pub fn roll(&self) -> f32 {
         self.nxp.PhiPl
     }
 
+    #[cfg_attr(feature = "python", getter)]
     pub fn pitch(&self) -> f32 {
         self.nxp.ThePl
     }
 
+    #[cfg_attr(feature = "python", getter)]
     pub fn yaw(&self) -> f32 {
         self.nxp.PsiPl
     }
 
     /// Returns the quaternion `[w, x, y, z]`.
+    #[cfg_attr(feature = "python", getter)]
     pub fn quaternion(&self) -> [f32; 4] {
         [
             self.nxp.qPl.q0,
@@ -93,11 +114,13 @@ impl NxpFusion {
     }
 
     /// Get the linear acceleration part of the acceleration value given to update (in `g`, `[x, y, z]`).
+    #[cfg_attr(feature = "python", getter)]
     pub fn linear_acceleration(&self) -> [f32; 3] {
         [self.nxp.aSePl[0], self.nxp.aSePl[1], self.nxp.aSePl[2]]
     }
 
     /// Get the gravity vector from the gyroscope values (in `g`, `[x, y, z]`).
+    #[cfg_attr(feature = "python", getter)]
     pub fn gravity_vector(&self) -> [f32; 3] {
         [
             self.nxp.gSeGyMi[0],
@@ -107,8 +130,18 @@ impl NxpFusion {
     }
 
     /// Get the geomagnetic vector in global frame (in `uT`, `[x, y, z]`).
+    #[cfg_attr(feature = "python", getter)]
     pub fn geomagnetic_vector(&self) -> [f32; 3] {
         [self.nxp.mGl[0], self.nxp.mGl[1], self.nxp.mGl[2]]
+    }
+
+    #[cfg(feature = "python")]
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
+        match op {
+            CompareOp::Eq => Ok(self == other),
+            CompareOp::Ne => Ok(self != other),
+            _ => Err(exceptions::PyTypeError::new_err("Not implemented."))
+        }
     }
 }
 
