@@ -1,0 +1,23 @@
+[package]
+name = "ahrs-fusion-python"
+version = "0.3.0"
+edition = "2021"
+description = "Port of NXP Sensor Fusion (as written by Adafruit)"
+license-file = "LICENSE"
+repository = "https://github.com/gauteh/ahrs-fusion"
+authors = ["Gaute Hope <eg@agute.vetsj.com>"]
+
+[lib]
+name = "ahrs_fusion"
+crate-type = ["cdylib"]
+
+[dependencies]
+cty = "0"
+pyo3 = { version = "0.16.3", features = ["extension-module", "abi3-py39"] }
+ahrs-fusion = { path = "../", features = ["python"] }
+
+[build-dependencies]
+cc = "1"
+bindgen = "0"
+
+

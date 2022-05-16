@@ -24,7 +24,8 @@ extern crate cmsis_dsp;
 ```
 ## Python bindings
 
-You can also use this small library through Python bindings. Install using `pip`
+You can also use this small library through Python bindings. Enter the `python`
+directory and install using `pip`
 or e.g. `maturin develop --release` in your virtual environment.
 
 ## Using from the command-line

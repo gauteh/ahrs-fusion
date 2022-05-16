@@ -6,14 +6,6 @@ use pyo3::{prelude::*, basic::CompareOp, exceptions};
 
 mod nxp;
 
-#[cfg(feature = "python")]
-#[pymodule]
-fn ahrs_fusion(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<NxpFusion>()?;
-
-    Ok(())
-}
-
 #[cfg_attr(feature = "python", pyclass)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct NxpFusion {

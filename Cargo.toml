@@ -7,9 +7,12 @@ license-file = "LICENSE"
 repository = "https://github.com/gauteh/ahrs-fusion"
 authors = ["Gaute Hope <eg@agute.vetsj.com>"]
 
+[workspace]
+members = [ ".", "python" ]
+
 [lib]
 name = "ahrs_fusion"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dependencies]
 cty = "0"
